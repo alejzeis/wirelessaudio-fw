@@ -1,0 +1,6 @@
+[submodule "rp2040_i2s_example"]
+	path = rp2040_i2s_example
+	url = https://github.com/malacalypse/rp2040_i2s_example/
+[submodule "libldac"]
+	path = libldac
+	url = https://android.googlesource.com/platform/external/libldac
