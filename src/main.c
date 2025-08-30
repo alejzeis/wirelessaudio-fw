@@ -40,6 +40,7 @@
 #include "pico/stdlib.h"
 #include "pico/stdio.h"
 #include "pico/time.h"
+#include "hardware/clocks.h"
 #include "hardware/i2c.h"
 #include "hardware/gpio.h"
 #include "util.h"
@@ -48,6 +49,8 @@
 #include <stdio.h>
 
 int main() {
+    // Set a 132.000 MHz system clock to more evenly divide the audio frequencies
+    set_sys_clock_khz(132000, true);
     stdio_init_all();
 
     sleep_ms(2000);
@@ -57,10 +60,10 @@ int main() {
     // Initialize i2c
     i2c_init(I2C_BUS_INSTANCE, I2C_BUS_SPEED);
 
-    gpio_set_function(PIN_I2C_SDA, GPIO_FUNC_I2C);
-    gpio_set_function(PIN_I2C_SCL, GPIO_FUNC_I2C);
+    gpio_set_function(0, GPIO_FUNC_I2C);
+    gpio_set_function(1, GPIO_FUNC_I2C);
 
-    //ADCController_init();
+    ADCController_init();
  //   DACController_init();
     BT_Controller_init();
     UIController_init();

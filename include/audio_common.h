@@ -70,8 +70,8 @@ static const InterleavedSampleProvider AUDIO_PLAYBACK_PROVIDER = &Util_sineAudio
 
 static const PIO AUDIO_ADC_PIO = pio0;
 static const PIO AUDIO_DAC_PIO = pio1;
-static const uint32_t AUDIO_SAMPLE_RATE = 96000;
 static const uint32_t AUDIO_PLAYBACK_SAMPLE_RATE = 48000;
+static const uint32_t AUDIO_SAMPLE_RATE = AUDIO_PLAYBACK_SAMPLE_RATE;
 static const uint8_t AUDIO_CHANNELS = 2;
 
 #endif // AUDIO_COMMON_H

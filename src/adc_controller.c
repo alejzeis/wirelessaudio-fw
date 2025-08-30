@@ -39,14 +39,28 @@
 #include "hardware/dma.h"
 #include "hardware/pio.h"
 #include "hardware/i2c.h"
+#include <pico/time.h>
 
-static const uint8_t ADC_I2C_ADDRESS = 0x9C;
+static const uint32_t ADC_STATUS_UPDATE_INTERVAL = 10000;
+
+static const uint8_t ADC_I2C_ADDRESS = 78;
+static const uint8_t ADC_REG_SLEEP_CFG = 0x2;
+static const uint8_t ADC_REG_ASI_CFG0 = 0x7;
 static const uint8_t ADC_REG_MST_CFG0 = 0x13;
 static const uint8_t ADC_REG_MST_CFG1 = 0x14;
 static const uint8_t ADC_REG_CLK_SRC = 0x16;
 static const uint8_t ADC_REG_GPIO_CFG0 = 0x21;
+static const uint8_t ADC_REG_GPO_CFG0 = 0x22;
+static const uint8_t ADC_REG_GPI_CFG0 = 0x2B;
+static const uint8_t ADC_REG_CH1_CFG0 = 0x3C;
+static const uint8_t ADC_REG_CH2_CFG0 = 0x41;
+static const uint8_t ADC_REG_IN_CH_EN = 0x73;
+static const uint8_t ADC_REG_ASI_OUT_CH_EN = 0x74;
+static const uint8_t ADC_REG_PWR_CFG = 0x75;
+static const uint8_t ADC_REG_DEV_STS0 = 0x76;
+static const uint8_t ADC_REG_DEV_STS1 = 0x77;
 
-static const uint32_t ADC_SCK_MULTIPLIER = 128; // 96KHz * 128 = 12.288 MHz (supported by ADC)
+static const uint32_t ADC_SCK_MULTIPLIER = 256; // 48KHz * 256 = 12.288 MHz (supported by ADC)
 /* 
  * Pin to output the Master Clock on.
  * The ADC supports using it's multipurpose "GPIO" pin
@@ -70,10 +84,38 @@ static const i2s_config i2sConfig = {
 
 static __attribute__((aligned(8))) pio_i2s i2s;
 
+static void adc_write(uint8_t registerAddress, uint8_t value) {
+    uint8_t data[2];
+
+    data[0] = registerAddress;
+    data[1] = value;
+
+    i2c_write_blocking(I2C_BUS_INSTANCE, ADC_I2C_ADDRESS, data, 2, false);
+}
+
+static uint8_t adc_read(uint8_t registerAddress) {
+    uint8_t value = 0;
+
+    if (i2c_write_blocking(I2C_BUS_INSTANCE, ADC_I2C_ADDRESS, &registerAddress, 1, false) == 1) {
+        i2c_read_blocking(I2C_BUS_INSTANCE, ADC_I2C_ADDRESS, &value, 1, false);
+    } else {
+        printf("[ADC]: I2C Write failed to device 0x%X, register 0x%X\n", ADC_I2C_ADDRESS, registerAddress);
+    }
+
+    return value;
+}
+
 static void process_audio(const int32_t* input, int32_t* output, size_t num_frames) {
+    static bool recieved_data = false;
+
     // TODO: Pass this data to the Bluetooth encoder 
     for (size_t i = 0; i < num_frames * 2; i++) {
         output[i] = input[i];
+    }
+
+    if (!recieved_data) {
+        printf("[ADC] First I2S Samples receieved\n");
+        recieved_data = true;
     }
 }
 
@@ -96,39 +138,109 @@ static void ADCController_i2sDMAHandler(void) {
 }
 
 static void configureADC(void) {
-    uint8_t gpioCfg0Write[] = { ADC_REG_GPIO_CFG0,
-        // Configure ADC Pin GPIO0 as MCLK input
-        0b10100000
-    };
+    // Configure ADC Pin GPIO0 as MCLK input
+    uint8_t gpioCfg0Write = 0b10100001;
 
-    uint8_t mstCfg0Write[] = { ADC_REG_MST_CFG0,
-        // Sets ADC to I2S MASTER mode,
-        // selects a sample rate of multiple of 48 KHz,
-        // enables PLL, auto clock configuration,
-        // and notifies that MCLK will be 12.288 MHz
-        0b10000001 
-    };
+    // Set to use I2S, 32bit word size
+    uint8_t asiCfg0Write = 0b01110000;
 
-    uint8_t mstCfg1Write[] = { ADC_REG_MST_CFG1,
-        // 96 KHz and 32 FSYNC/BCLK ratio
-        0b01010010
-    };
+    // Sets ADC to I2S MASTER mode,
+    // selects a sample rate of multiple of 48 KHz,
+    // enables PLL, auto clock configuration,
+    // and notifies that MCLK will be 12.288 MHz
+    uint8_t mstCfg0Write = 0b10000001;
+
+    // 48 KHz and 256 FSYNC/BCLK ratio
+    uint8_t mstCfg1Write = 0b01001000;
+
+    // Set Channel 1,2 input type to LINE IN, single-ended, disabled dynamic Range Enhancer
+    uint8_t ch1ConfigWrite = 0b10100000;
+    uint8_t ch2ConfigWrite = 0b10100000;
+
+    // Enable CH1,2 output
+    uint8_t outChWrite = 0b11000000;
+
+    // Enable CH1,CH2
+    uint8_t inChEnWrite = 0b11000000;
+    // Enable all enabled ADC channels, enable PLL
+    uint8_t pwrConfigWrite = 0b11100000;
+   
+    // Enable internal 1.8V AREG supply, wake up the chip
+    uint8_t sleepCfgWrite = 0b10000001;
 
     // Write register contents
-    i2c_write_blocking(I2C_BUS_INSTANCE, ADC_I2C_ADDRESS, gpioCfg0Write, 2, false);
-    i2c_write_blocking(I2C_BUS_INSTANCE, ADC_I2C_ADDRESS, mstCfg0Write, 2, false);
-    i2c_write_blocking(I2C_BUS_INSTANCE, ADC_I2C_ADDRESS, mstCfg1Write, 2, false);
+    // Wakeup from sleep
+    adc_write(ADC_REG_SLEEP_CFG, sleepCfgWrite);
+
+    sleep_ms(20);
+    
+    // Disable GPIO pin
+    adc_write(ADC_REG_GPIO_CFG0, gpioCfg0Write);
+    // Disable GPI/GPO pin functions (to allow using GPI/GPO pins as channel 2 input)
+    adc_write(ADC_REG_GPI_CFG0, 0);
+    adc_write(ADC_REG_GPO_CFG0, 0);
+
+    adc_write(ADC_REG_ASI_CFG0, asiCfg0Write);
+    adc_write(ADC_REG_MST_CFG0, mstCfg0Write);
+    adc_write(ADC_REG_MST_CFG1, mstCfg1Write);
+    adc_write(ADC_REG_CH1_CFG0, ch1ConfigWrite);
+    adc_write(ADC_REG_CH2_CFG0, ch2ConfigWrite);
+    // Enable ASI Bus error detection
+    adc_write(0x9, 0b00100000);
+    adc_write(ADC_REG_ASI_OUT_CH_EN, outChWrite);
+    sleep_ms(10);
+    adc_write(ADC_REG_IN_CH_EN, inChEnWrite);
+
+    sleep_ms(10);
+
+    // Power on channels
+    adc_write(ADC_REG_PWR_CFG, pwrConfigWrite);
 
     printf("[ADC]: Configured device.\n");
 }
 
+static void dumpADCStatus(void) {
+    uint8_t sts0;
+    uint8_t sts1;
+    uint8_t sleepStatus;
+    uint8_t interruptStatus;
+    uint8_t asiStatus;
+    bool channel0Power;
+    bool channel1Power;
+
+
+    sleepStatus = adc_read(ADC_REG_SLEEP_CFG);
+    interruptStatus = adc_read(0x36);
+    sts0 = adc_read(ADC_REG_DEV_STS0);
+    sts1 = adc_read(ADC_REG_DEV_STS1);
+    asiStatus = adc_read(0x15);
+
+    printf("[ADC]: Report (STS0: 0x%X, STS1: 0x%X, SLEEP_CFG: 0x%X, INT: 0x%X)\n", sts0, sts1, sleepStatus, interruptStatus);
+    printf("[ADC]: ASI Bus STS: 0x%X\n", asiStatus);
+}
+
 void ADCController_init(void) {
-    configureADC();
+    printf("[ADC]: Configuring device (I2C Address 0x%X)\n", ADC_I2C_ADDRESS);
 
     // Start i2s operation
     i2s_program_start_slaved(AUDIO_ADC_PIO, &i2sConfig, ADCController_i2sDMAHandler, &i2s);
+
+    configureADC();
+
+    sleep_ms(50);
+    dumpADCStatus();
 }
 
 void ADCController_update(void) {
+    static uint32_t lastUpdate = 0;
+    static bool ledState = false;
 
+    uint32_t now = Util_getTimeMs();
+
+    // Blink the status LED according to the period
+    if (now - lastUpdate >= ADC_STATUS_UPDATE_INTERVAL) {
+        dumpADCStatus();
+
+        lastUpdate = now;
+    }
 }

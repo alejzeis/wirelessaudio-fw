@@ -35,19 +35,19 @@
 
 #include <hardware/i2c.h>
 
-static const i2c_inst_t* I2C_BUS_INSTANCE = &i2c0_inst;
+static const i2c_inst_t* I2C_BUS_INSTANCE = i2c0;
 static const unsigned int I2C_BUS_SPEED = 100 * 1000;
 
-static const unsigned int PIN_I2C_SCL = 1;
-static const unsigned int PIN_I2C_SDA = 2;
+static const unsigned int PIN_I2C_SCL = 0;
+static const unsigned int PIN_I2C_SDA = 1;
 
 static const unsigned int PIN_SW_LEFT = 10;
 static const unsigned int PIN_SW_OK = 11;
 static const unsigned int PIN_SW_RIGHT = 12;
-static const unsigned int PIN_ADC_SD = 14;
-static const unsigned int PIN_ADC_BCLK = 15;
-static const unsigned int PIN_ADC_WS = 16;
-static const unsigned int PIN_ADC_GPIO = 17;
+static const unsigned int PIN_ADC_SD = 14 - 1;
+static const unsigned int PIN_ADC_BCLK = 15 - 1;
+static const unsigned int PIN_ADC_WS = 16 - 1;
+static const unsigned int PIN_ADC_GPIO = 17 - 1;
 
 static const unsigned int PIN_POT_TAP = 34;
 static const unsigned int PIN_DAC_FLT = 32;
