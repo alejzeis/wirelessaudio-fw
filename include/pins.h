@@ -38,27 +38,27 @@
 static const i2c_inst_t* I2C_BUS_INSTANCE = i2c0;
 static const unsigned int I2C_BUS_SPEED = 100 * 1000;
 
-static const unsigned int PIN_I2C_SCL = 0;
-static const unsigned int PIN_I2C_SDA = 1;
+static const unsigned int PIN_I2C_SCL = 1;
+static const unsigned int PIN_I2C_SDA = 0;
 
-static const unsigned int PIN_SW_LEFT = 10;
-static const unsigned int PIN_SW_OK = 11;
-static const unsigned int PIN_SW_RIGHT = 12;
-static const unsigned int PIN_ADC_SD = 14 - 1;
-static const unsigned int PIN_ADC_BCLK = 15 - 1;
-static const unsigned int PIN_ADC_WS = 16 - 1;
-static const unsigned int PIN_ADC_GPIO = 17 - 1;
+static const unsigned int PIN_SW_LEFT = 7;
+static const unsigned int PIN_SW_OK = 8;
+static const unsigned int PIN_SW_RIGHT = 9;
+static const unsigned int PIN_ADC_SD = 10;
+static const unsigned int PIN_ADC_BCLK = 11;
+static const unsigned int PIN_ADC_WS = 12;
+static const unsigned int PIN_ADC_GPIO = 13;
 
-static const unsigned int PIN_POT_TAP = 34;
-static const unsigned int PIN_DAC_FLT = 32;
-static const unsigned int PIN_DAC_BCK = 31;
-static const unsigned int PIN_DAC_SD = 30;
-static const unsigned int PIN_DAC_WS = 29;
-static const unsigned int PIN_DAC_XSMT = 27;
-static const unsigned int PIN_LCD_NRST = 26;
-static const unsigned int PIN_SPI_TX = 25;
-static const unsigned int PIN_SPI_CLK = 24;
-static const unsigned int PIN_SPI_CS = 22;
-static const unsigned int PIN_LCD_A0 = 21;
+static const unsigned int PIN_POT_TAP = 28;
+static const unsigned int PIN_DAC_FLT = 27;
+static const unsigned int PIN_DAC_BCK = PIN_ADC_BCLK;
+static const unsigned int PIN_DAC_SD = 26;
+static const unsigned int PIN_DAC_WS = PIN_ADC_WS;
+static const unsigned int PIN_DAC_XSMT = 21;
+static const unsigned int PIN_LCD_NRST = 20;
+static const unsigned int PIN_SPI_TX = 19;
+static const unsigned int PIN_SPI_CLK = 18;
+static const unsigned int PIN_LCD_CS = 17;
+static const unsigned int PIN_LCD_A0 = 16;
 
 #endif // PINS_H
