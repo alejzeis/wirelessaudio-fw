@@ -41,6 +41,7 @@
 #include "bt/bt_controller.h"
 #include "bt/sbc.h"
 #include "bt/codecs.h"
+#include "ui_controller.h"
 #include "audio_common.h"
 #include "util.h"
 
@@ -51,6 +52,7 @@
 #include <bluetooth.h>
 #include <btstack_defines.h>
 #include <btstack_event.h>
+#include <btstack_util.h>
 #include <classic/a2dp_source.h>
 #include <classic/avdtp.h>
 #include <classic/avdtp_source.h>
@@ -491,6 +493,7 @@ static void onLDACConfigurationReceived(uint8_t *packet) {
 }
 
 static void onA2DPStreamEstablished(uint8_t *packet) {
+    char lcdStatusText[256];
     uint8_t remote_seid;
     uint8_t local_seid;
     uint8_t cid;
@@ -523,6 +526,10 @@ static void onA2DPStreamEstablished(uint8_t *packet) {
                         BT_Codecs_setActiveCodecSBC(media_tracker.sbcConfig);
 
                         status = a2dp_source_start_stream(media_tracker.a2dp_cid, local_seid);
+
+                        sprintf(lcdStatusText, "SBC %ib @ %i kHz", AUDIO_WORDSIZE, media_tracker.sbcConfig.sampling_frequency);
+                        UIController_setBottomText(lcdStatusText);
+
                         break;
                     default:
                         printf("[A2DP Source]: Failed to determine Codec by Remote SEID, something very wrong\n");
@@ -535,6 +542,7 @@ static void onA2DPStreamEstablished(uint8_t *packet) {
 }
 
 static void a2dp_source_packet_handler(uint8_t packet_type, uint16_t channel, uint8_t *packet, uint16_t size){
+    char uiStatusText[64];
     UNUSED(channel);
     UNUSED(size);
     struct BT_SBC_Configuration_T sbc_configuration;
@@ -570,6 +578,9 @@ static void a2dp_source_packet_handler(uint8_t packet_type, uint16_t channel, ui
             printf("[A2DP Source]: Connected to address %s, a2dp cid 0x%02x\n", 
                     bd_addr_to_str(address), 
                     media_tracker.a2dp_cid);
+
+            sprintf(uiStatusText, "To: %s", bd_addr_to_str(address));
+            UIController_setTopText(uiStatusText);
 
             a2dp_source_establish_stream(address, &media_tracker.a2dp_cid);
             break;
@@ -668,6 +679,7 @@ static void a2dp_source_packet_handler(uint8_t packet_type, uint16_t channel, ui
             if (cid == media_tracker.a2dp_cid) {
                 media_tracker.stream_opened = 0;
                 printf("[A2DP Source]: Stream released.\n");
+                UIController_setBottomText("IDLE");
             }
             a2dp_demo_timer_stop(&media_tracker);
             break;
@@ -677,6 +689,8 @@ static void a2dp_source_packet_handler(uint8_t packet_type, uint16_t channel, ui
                 media_tracker.avrcp_cid = 0;
                 media_tracker.a2dp_cid = 0;
                 printf("[A2DP Source]: Signaling released.\n\n");
+
+                UIController_setTopText("-> Not Connected");
             }
             break;
         default:

@@ -41,6 +41,9 @@ void UIController_init(void);
 
 void UIController_update(void);
 
+void UIController_setTopText(char *text);
+void UIController_setBottomText(char *text);
+
 #ifdef __cplusplus
 }
 #endif

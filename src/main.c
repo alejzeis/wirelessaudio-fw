@@ -63,16 +63,17 @@ int main() {
     gpio_set_function(0, GPIO_FUNC_I2C);
     gpio_set_function(1, GPIO_FUNC_I2C);
 
+    UIController_init();
  //   ADCController_init();
  //   DACController_init();
     BT_Controller_init();
-    UIController_init();
 
 
+    UIController_setBottomText("Extremely long string that won't fit");
     printf("[main]: modules initialized.\n");
     for (;;) {
-        ADCController_update();
-        DACController_update();
+        //ADCController_update();
+        //DACController_update();
         BT_Controller_update();
         UIController_update();
     }

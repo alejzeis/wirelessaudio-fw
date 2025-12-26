@@ -36,14 +36,21 @@
 
 #include "DogGraphicDisplay.h"
 
+#include <cstring>
 #include <cstdio>
+#include <pico/time.h>
 
 #include "pico/cyw43_arch.h"
 #include "hardware/gpio.h"
 
 #define UBUNTUMONO_B_16_LEN 1528
+#define TEXT_BUFFER_LEN 512
 
-static const uint32_t LED_UPDATE_PERIOD = 250;
+// Maximum amount of chars displayed with Ubuntu Mono 16 font that fit on the LCD
+#define MAX_LCD_UBUNTUMONO_CHARS 16
+
+static const uint32_t LED_UPDATE_PERIOD = 500;
+static const uint32_t LCD_UPDATE_PERIOD = 1000;
 
 static const uint8_t UBUNTUMONO_B_16[UBUNTUMONO_B_16_LEN] =
 {
@@ -146,6 +153,10 @@ static const uint8_t UBUNTUMONO_B_16[UBUNTUMONO_B_16_LEN] =
 };
 
 static DogGraphicDisplay DOG;
+static char topTextBuffer[TEXT_BUFFER_LEN];
+static char bottomTextBuffer[TEXT_BUFFER_LEN];
+static int topTextPosition = 0;
+static int bottomTextPosition = 0;
 
 extern "C" void UIController_init(void) {
     printf("[UI] Initializing DOGM-132 LCD\n");
@@ -156,17 +167,25 @@ extern "C" void UIController_init(void) {
     gpio_set_function(PIN_SPI_CLK, GPIO_FUNC_SPI);
     gpio_set_function(PIN_SPI_TX, GPIO_FUNC_SPI);
 
-    gpio_put(PIN_LCD_NRST, 1);
-
     DOG.begin(PIN_LCD_CS, PIN_SPI_TX, PIN_SPI_CLK, PIN_LCD_A0, PIN_LCD_NRST, DOGM132);
-    
-    DOG.string(0, 0, UBUNTUMONO_B_16, "Wi Audio", ALIGN_LEFT);
+
+    DOG.all_pixel_on(true);
+
+    sleep_ms(2000);
+
+    DOG.clear();
+
+    DOG.all_pixel_on(false);
+
+    DOG.string(0, 0, UBUNTUMONO_B_16, "Wi Audio", ALIGN_CENTER);
+
 
     printf("[UI] LCD Initialized.\n");
 }
 
 extern "C" void UIController_update(void) {
     static uint32_t lastUpdate = 0;
+    static uint32_t lcdLastUpdate = 0;
     static bool ledState = false;
 
     uint32_t now = Util_getTimeMs();
@@ -177,5 +196,56 @@ extern "C" void UIController_update(void) {
         ledState = !ledState;
 
         lastUpdate = now;
+    }
+
+    if (now - lcdLastUpdate >= LCD_UPDATE_PERIOD) {
+        DOG.clear();
+
+#if 0
+        printf("[UI]: LCD text update (positions: %i, %i)\n", topTextPosition, bottomTextPosition);
+#endif
+
+        DOG.string(0, 0, UBUNTUMONO_B_16, topTextBuffer + topTextPosition, ALIGN_LEFT);
+        DOG.string(0, 2, UBUNTUMONO_B_16, bottomTextBuffer + bottomTextPosition, ALIGN_LEFT);
+
+        if (strlen(topTextBuffer) > MAX_LCD_UBUNTUMONO_CHARS) {
+            if (topTextPosition < strlen(topTextBuffer) - 1) {
+                topTextPosition += 1;
+            } else {
+                topTextPosition = 0;
+            }
+        }
+
+        if (strlen(bottomTextBuffer) > MAX_LCD_UBUNTUMONO_CHARS) {
+            if (bottomTextPosition < strlen(bottomTextBuffer) - 1) {
+                bottomTextPosition += 1;
+            } else {
+                bottomTextPosition = 0;
+            }
+        }
+
+        lcdLastUpdate = now;
+    }
+}
+
+extern "C" void UIController_setTopText(char *text) {
+    int len = strlen(text);
+
+    if (len <= TEXT_BUFFER_LEN) {
+        strcpy(topTextBuffer, text);
+        topTextPosition = 0;
+    } else {
+        printf("[UI]: WARN: Top Text Change too large for buffer (%i)\n", len);
+    }
+}
+
+extern "C" void UIController_setBottomText(char *text) {
+    int len = strlen(text);
+
+    if (len <= TEXT_BUFFER_LEN) {
+        strcpy(bottomTextBuffer, text);
+        bottomTextPosition = 0;
+    } else {
+        printf("[UI]: WARN: Bottom Text Change too large for buffer (%i)\n", len);
     }
 }

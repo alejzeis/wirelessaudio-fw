@@ -33,6 +33,7 @@
 #include "bt/bt_controller.h"
 #include "audio_common.h"
 #include "adc_controller.h"
+#include "ui_controller.h"
 #include "bt/a2dp_source.h"
 #include "bt/codecs.h"
 #include "util.h"
@@ -49,8 +50,8 @@
 #include <stdint.h>
 #include <stdio.h>
 
-static const InterleavedSampleProvider AUDIO_PLAYBACK_PROVIDER = &ADCController_audioSampleProvider;
-//static const InterleavedSampleProvider AUDIO_PLAYBACK_PROVIDER = &Util_produceSinAudio;
+//static const InterleavedSampleProvider AUDIO_PLAYBACK_PROVIDER = &ADCController_audioSampleProvider;
+static const InterleavedSampleProvider AUDIO_PLAYBACK_PROVIDER = &Util_produceSinAudio;
 
 static const char *BT_DEVICE_NAME = "Wireless Audio Device";
 
@@ -214,6 +215,8 @@ void BT_Controller_init(void) {
     // Turn on Bluetooth chip
     hci_power_control(HCI_POWER_ON);
     printf("[BT]: Powered on\n");
+
+    UIController_setTopText("-> Not Connected");
 }
 
 void BT_Controller_update(void) {
