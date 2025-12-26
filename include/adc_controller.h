@@ -33,8 +33,16 @@
 #ifndef ADC_CONTROLLER_H
 #define ADC_CONTROLLER_H
 
+#include "stdint.h"
+
 void ADCController_init(void);
 
 void ADCController_update(void);
+
+/**
+ * Implementation of InterleavedAudioSampleProvider (see audo_common.h),
+ * providing samples from the I2S interface connected to the ADC
+ */
+int ADCController_audioSampleProvider(unsigned int, int32_t*, unsigned int);
 
 #endif // ADC_CONTROLLER_H

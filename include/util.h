@@ -35,6 +35,10 @@
 
 #include <stdint.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * Get current system time in milliseconds.
  */
@@ -50,4 +54,9 @@ int Util_produceSinAudio(unsigned int sampleRate, int32_t * pcm_buffer, unsigned
 int Util_produceSinAudio16(unsigned int sampleRate, int16_t * pcm_buffer, unsigned int num_samples_to_write);
 
 int Util_sineAudioProducer(unsigned int numChannels, int32_t *pcmBuffer, unsigned int samplesRequested);
+
+#ifdef __cplusplus
+}
+#endif
+
 #endif // UTIL_H

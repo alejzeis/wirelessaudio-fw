@@ -66,7 +66,6 @@ typedef int (*InterleavedSampleProvider)(unsigned int, int32_t*, unsigned int);
  */
 typedef void (*BufferConsumer)(uint8_t*, unsigned int);
 
-static const InterleavedSampleProvider AUDIO_PLAYBACK_PROVIDER = &Util_sineAudioProducer;
 
 static const PIO AUDIO_ADC_PIO = pio0;
 static const PIO AUDIO_DAC_PIO = pio1;

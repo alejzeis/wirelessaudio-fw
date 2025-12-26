@@ -36,12 +36,16 @@
 
 #include "i2s.h"
 
+#include "pico/util/queue.h"
 #include "hardware/dma.h"
 #include "hardware/pio.h"
 #include "hardware/i2c.h"
+#include "util.h"
 #include <pico/time.h>
 
-static const uint32_t ADC_STATUS_UPDATE_INTERVAL = 10000;
+#include <inttypes.h>
+
+static const uint32_t ADC_STATUS_UPDATE_INTERVAL = 1000;
 
 static const uint8_t ADC_I2C_ADDRESS = 78;
 static const uint8_t ADC_REG_SLEEP_CFG = 0x2;
@@ -76,13 +80,14 @@ static const i2s_config i2sConfig = {
     ADC_SCK_MULTIPLIER,
     AUDIO_WORDSIZE,
     ADC_MCLK_PIN, // SCK pin
-    5, // Data out pin (Don't care about this one, pick unused pin here)
+    PIN_DAC_SD, // Data out pin (Don't care about this one, pick unused pin here)
     PIN_ADC_SD, // Data in pin (Sound data) 
     PIN_ADC_BCLK, // Base clock pin, (bit clock) 
     true // Generate a System Clock signal to output on SCK
 };
 
 static __attribute__((aligned(8))) pio_i2s i2s;
+static int32_t firstBuffer[STEREO_BUFFER_SIZE];
 
 static void adc_write(uint8_t registerAddress, uint8_t value) {
     uint8_t data[2];
@@ -107,14 +112,16 @@ static uint8_t adc_read(uint8_t registerAddress) {
 
 static void process_audio(const int32_t* input, int32_t* output, size_t num_frames) {
     static bool recieved_data = false;
+    int32_t junk;
 
     // TODO: Pass this data to the Bluetooth encoder 
     for (size_t i = 0; i < num_frames * 2; i++) {
-        output[i] = input[i];
+        firstBuffer[i] = input[i];
     }
 
     if (!recieved_data) {
         printf("[ADC] First I2S Samples receieved\n");
+
         recieved_data = true;
     }
 }
@@ -174,7 +181,7 @@ static void configureADC(void) {
 
     sleep_ms(20);
     
-    // Disable GPIO pin
+    // Disable GPIO pin, configure as MCLK input
     adc_write(ADC_REG_GPIO_CFG0, gpioCfg0Write);
     // Disable GPI/GPO pin functions (to allow using GPI/GPO pins as channel 2 input)
     adc_write(ADC_REG_GPI_CFG0, 0);
@@ -241,6 +248,29 @@ void ADCController_update(void) {
     if (now - lastUpdate >= ADC_STATUS_UPDATE_INTERVAL) {
         dumpADCStatus();
 
+        printf("Buffer Data: ");
+        for (size_t i = 0; i < AUDIO_BUFFER_FRAMES * 2; i++) {
+            printf("%#" PRIx32 " ", firstBuffer[i]);
+            if (i % 16 == 0) {
+                printf("\n");
+            }
+        }
+        printf("\n");
+
         lastUpdate = now;
     }
+}
+
+int ADCController_audioSampleProvider(unsigned int channels, int32_t* samplesOut, unsigned int numReq) {
+    static int position = 0;
+    for (int i = 0; i < numReq * 2; i++) {
+        samplesOut[i] = firstBuffer[position];
+        position++;
+
+        if (position >= STEREO_BUFFER_SIZE) {
+            position = 0;
+        }
+    }
+
+    return numReq;
 }
