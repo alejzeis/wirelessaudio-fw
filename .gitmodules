@@ -4,3 +4,6 @@
 [submodule "libldac"]
 	path = libldac
 	url = https://android.googlesource.com/platform/external/libldac
+[submodule "DogGraphicDisplay-pico"]
+	path = DogGraphicDisplay-pico
+	url = https://github.com/alejzeis/DogGraphicDisplay-pico

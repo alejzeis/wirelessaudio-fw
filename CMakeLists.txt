@@ -13,6 +13,7 @@ project(wirelessaudio_fw)
 pico_sdk_init()
 
 set(LDAC_PATH ${CMAKE_CURRENT_LIST_DIR}/libldac)
+set(DOGM_PATH ${CMAKE_CURRENT_LIST_DIR}/DogGraphicDisplay-pico)
 
 if(DEFINED ENV{FDK_AAC_PATH})
     set(FDK_AAC_INCLUDES $ENV{FDK_AAC_PATH}/libAACenc/include)
@@ -27,6 +28,14 @@ add_library(ldac
 target_include_directories(ldac PRIVATE 
     ${LDAC_PATH}/inc 
     ${LDAC_PATH}/src
+)
+
+# Add DogM Graphics Library
+add_library(dogm
+    ${DOGM_PATH}/src/DogGraphicDisplay.cpp
+)
+target_include_directories(dogm PRIVATE
+    ${DOGM_PATH}/src
 )
 
 if(PICO_PLATFORM STREQUAL "rp2040")
@@ -57,12 +66,14 @@ add_executable(wirelessaudio_fw_pico
     src/bt/sbc.c
     src/bt/a2dp_source.c
     src/dac_controller.c
-    src/ui_controller.c
+    src/ui_controller.cpp
     src/util.c
+    ${DOGM_PATH}/src/arduino_pico.cpp
 )
 target_include_directories(wirelessaudio_fw_pico PRIVATE
     include
     rp2040_i2s_example
+    ${DOGM_PATH}/src
     ${LDAC_PATH}/inc
     ${FDK_AAC_INCLUDES}
 )
@@ -71,6 +82,8 @@ target_link_libraries(wirelessaudio_fw_pico
     rp2040_i2s
     # libldac library
     ldac
+    # Dog Graphic Display Lib
+    dogm
     # Pico Standard Library stuff:
     pico_stdlib
     pico_btstack_classic
@@ -79,6 +92,7 @@ target_link_libraries(wirelessaudio_fw_pico
     pico_cyw43_arch_none
     pico_multicore
     hardware_i2c
+    hardware_spi
 )
 
 if (DEFINED FDK_AAC_INCLUDES)

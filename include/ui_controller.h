@@ -33,8 +33,16 @@
 #ifndef UI_CONTROLLER_H
 #define UI_CONTROLLER_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 void UIController_init(void);
 
 void UIController_update(void);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // UI_CONTROLLER_H
